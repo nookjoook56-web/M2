@@ -7,7 +7,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def main():
     # 1. GÜNCEL PROXY ADRESİN
-    PROXY = "https://backdor-proxy.onrender.com"
+    PROXY = "https://backdor-proxy.onrender.com/proxy?link="
     START = "https://larcivertsports1.blogspot.com/?m=1"
     FILE_NAME = "playlist.m3u"
     
