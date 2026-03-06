@@ -1,61 +1,32 @@
 import requests
-from bs4 import BeautifulSoup
 import re
-import os
 
-# YAPILANDIRMA
 SOURCES = [
     "https://www.larcivertsports.com",
     "https://justintv.co/izle/"
 ]
 FILE_NAME = "playlist.m3u"
-PACKAGE_NAME = "backdor22"
 
-def fetch_stream(url):
+def super_hunter(url):
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Referer': url
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     }
     try:
-        print(f"Tarama başlıyor: {url}")
-        response = requests.get(url, headers=headers, timeout=15)
+        r = requests.get(url, headers=headers, timeout=15)
+        # Sadece HTML içinde değil, JavaScript blokları içinde de m3u8 ara
+        # Bu regex daha geniş kapsamlıdır
+        matches = re.findall(r'[\'"](https?://[^\'"]+\.m3u8[^\'"]*)[\'"]', r.text)
         
-        # 1. YÖNTEM: Sayfa içindeki gizli m3u8 linklerini ara (Regex)
-        found_m3u8 = re.findall(r'https?://[\w\.-]+/[\w\.-]+[/\w\.-]*\.m3u8[?\w\d=]*', response.text)
-        if found_m3u8:
-            return found_m3u8[0]
-
-        # 2. YÖNTEM: iframe içindeki kaynakları kontrol et
-        soup = BeautifulSoup(response.text, 'html.parser')
-        iframes = soup.find_all('iframe')
-        for ifrm in iframes:
-            src = ifrm.get('src', '')
-            if src:
-                if src.startswith('/'):
-                    src = f"{url.rstrip('/')}{src}"
-                if "m3u8" in src or "stream" in src:
-                    return src
-    except Exception as e:
-        print(f"Hata ({url}): {e}")
+        if matches:
+            # Geçersiz veya reklam linklerini filtrele
+            for link in matches:
+                if "chunklist" not in link and "playlist.m3u8" in link or "stream" in link:
+                    return link.replace('\\/', '/') # Kaçış karakterlerini düzelt
+            return matches[0].replace('\\/', '/')
+            
+    except:
+        pass
     return None
 
-def main():
-    final_link = None
-    for site in SOURCES:
-        link = fetch_stream(site)
-        if link:
-            final_link = link
-            break
-            
-    stream_url = final_link if final_link else "https://beklemede.com/yayin-yok.m3u8"
-    
-    content = f"""#EXTM3U
-#EXTINF:-1 tvg-id="beinsport-feed1" group-title="{PACKAGE_NAME}",Beinsport FEED 1
-{stream_url}
-"""
-    with open(FILE_NAME, "w", encoding="utf-8") as f:
-        f.write(content)
-    print(f"Playlist güncellendi: {stream_url}")
-
-if __name__ == "__main__":
-    main()
+# Ana döngüde super_hunter'ı kullan
+# (Geri kalan write_m3u kısımları aynı kalabilir)
