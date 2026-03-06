@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import re
+import os
 
 # YAPILANDIRMA
 SOURCES = [
@@ -18,7 +19,6 @@ def fetch_stream(url):
     try:
         print(f"Tarama başlıyor: {url}")
         response = requests.get(url, headers=headers, timeout=15)
-        soup = BeautifulSoup(response.text, 'html.parser')
         
         # 1. YÖNTEM: Sayfa içindeki gizli m3u8 linklerini ara (Regex)
         found_m3u8 = re.findall(r'https?://[\w\.-]+/[\w\.-]+[/\w\.-]*\.m3u8[?\w\d=]*', response.text)
@@ -26,26 +26,15 @@ def fetch_stream(url):
             return found_m3u8[0]
 
         # 2. YÖNTEM: iframe içindeki kaynakları kontrol et
+        soup = BeautifulSoup(response.text, 'html.parser')
         iframes = soup.find_all('iframe')
         for ifrm in iframes:
             src = ifrm.get('src', '')
             if src:
-                # Eğer src göreceliyse (/) tam adrese çevir
                 if src.startswith('/'):
                     src = f"{url.rstrip('/')}{src}"
-                
-                # iframe içine girip tekrar m3u8 arayalım (Derinleşme)
-                try:
-                    inner_res = requests.get(src, headers=headers, timeout=10)
-                    inner_m3u8 = re.findall(r'https?://[\w\.-]+/[\w\.-]+[/\w\.-]*\.m3u8[?\w\d=]*', inner_res.text)
-                    if inner_m3u8:
-                        return inner_m3u8[0]
-                except:
-                    continue
-                
-                if "stream" in src or "player" in src:
+                if "m3u8" in src or "stream" in src:
                     return src
-
     except Exception as e:
         print(f"Hata ({url}): {e}")
     return None
@@ -56,9 +45,8 @@ def main():
         link = fetch_stream(site)
         if link:
             final_link = link
-            break # İlk çalışan linki bulduğunda dur
+            break
             
-    # Link bulunamazsa test linki veya boş bırakma
     stream_url = final_link if final_link else "https://beklemede.com/yayin-yok.m3u8"
     
     content = f"""#EXTM3U
@@ -71,4 +59,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
