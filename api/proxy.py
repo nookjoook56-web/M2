@@ -3,7 +3,6 @@ import requests
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Linki parametre olarak al (örn: /api/proxy?link=http://...)
         from urllib.parse import urlparse, parse_qs
         query = parse_qs(urlparse(self.path).query)
         target_link = query.get('link', [None])[0]
@@ -13,15 +12,22 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
-        # JustinTV'yi kandırmak için gereken headerlar
+        # Blogspot ve AMP korumalarını aşmak için gerekli başlıklar
         headers = {
-            'Referer': 'https://justintv.co/',
-            'User-Agent': 'Mozilla/5.0'
+            'Referer': 'https://larcivertsports1.blogspot.com/',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
         
-        req = requests.get(target_link, headers=headers, stream=True)
-        self.send_response(200)
-        self.send_header('Content-type', 'application/vnd.apple.mpegurl')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        self.wfile.write(req.content)
+        try:
+            req = requests.get(target_link, headers=headers, stream=True, timeout=10)
+            self.send_response(req.status_code)
+            
+            # Gerekli CORS ve içerik tipi başlıklarını ekle
+            self.send_header('Content-type', 'application/vnd.apple.mpegurl')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(req.content)
+        except:
+            self.send_response(500)
+            self.end_headers()
+            
