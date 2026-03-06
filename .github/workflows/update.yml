@@ -2,8 +2,8 @@ name: Otomatik Playlist Guncelleme
 
 on:
   schedule:
-    - cron: '0 * * * *' # Her saat başı çalışır
-  workflow_dispatch: # Manuel çalıştırmak istersen
+    - cron: '*/30 * * * *' # 30 dakikada bir çalışacak şekilde hızlandırdık
+  workflow_dispatch: 
 
 jobs:
   build:
@@ -18,7 +18,8 @@ jobs:
           python-version: '3.9'
 
       - name: Kütüphaneleri Yükle
-        run: pip install requests beautifulsoup4
+        # cloudscraper ekledik
+        run: pip install requests beautifulsoup4 cloudscraper 
 
       - name: Scraper'ı Çalıştır
         run: python scraper.py
@@ -27,6 +28,7 @@ jobs:
         run: |
           git config --global user.name "nookjoook56-web"
           git config --global user.email "github-actions@github.com"
+          touch playlist.m3u
           git add playlist.m3u
-          git diff --quiet && git diff --staged --quiet || (git commit -m "FEED 1 Guncellendi: $(date)" && git push)
+          git diff --staged --quiet || (git commit -m "JustinTV Guncellendi: $(date)" && git push)
           
