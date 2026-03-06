@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import os
 
 # YAPILANDIRMA
-TARGET_URL = "https://hedef-yayin-sitesi.com" # Burayı asıl site ile değiştir
+TARGET_URL = "https://www.larcivertsports.com/" # Burayı asıl site ile değiştir
 FILE_NAME = "playlist.m3u"
 PACKAGE_NAME = "backdor22" # Kayıtlı paket ismin
 
