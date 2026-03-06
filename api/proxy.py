@@ -4,36 +4,41 @@ from urllib.parse import urlparse, parse_qs
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Link parametresini güvenli bir şekilde al
+        # 1. Gelen link parametresini güvenli bir şekilde al
         query = parse_qs(urlparse(self.path).query)
         target_link = query.get('link', [None])[0]
 
         if not target_link:
             self.send_response(400)
             self.end_headers()
-            self.wfile.write(b"Hata: Link parametresi eksik.")
+            self.wfile.write(b"Hata: Gecerli bir link parametresi bulunamadi.")
             return
 
-        # Blogspot ve sunucu korumalarını aşmak için başlıklar
+        # 2. Blogspot sunucularının beklediği kritik başlıklar (Headers)
         headers = {
             'Referer': 'https://larcivertsports1.blogspot.com/',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Origin': 'https://larcivertsports1.blogspot.com'
         }
         
         try:
-            # Yayını stream olarak çek ve ilet
+            # 3. Yayını (m3u8/ts) hedef sunucudan çek
+            # Stream=True kullanarak veriyi parça parça aktarıyoruz (hız için önemli)
             req = requests.get(target_link, headers=headers, stream=True, timeout=10)
-            self.send_response(req.status_code)
             
-            # Gerekli header'ları ekle
-            self.send_header('Content-type', 'application/vnd.apple.mpegurl')
+            # 4. Yanıtı başlat ve CORS (Erişim) izinlerini ekle
+            self.send_response(req.status_code)
+            self.send_header('Content-type', req.headers.get('Content-Type', 'application/vnd.apple.mpegurl'))
             self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
             self.end_headers()
             
-            # İçeriği parçalar halinde gönder
+            # 5. Veriyi istemciye (oynatıcıya) yaz
             self.wfile.write(req.content)
+
         except Exception as e:
+            # Hata durumunda log bas
             self.send_response(500)
             self.end_headers()
-            self.wfile.write(str(e).encode())
+            self.wfile.write(f"Proxy Hatasi: {str(e)}".encode())
             
