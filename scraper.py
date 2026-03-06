@@ -4,11 +4,11 @@ import re
 # YAPILANDIRMA
 SOURCES = ["https://justintv.co/izle/", "https://www.larcivertsports.com"]
 FILE_NAME = "playlist.m3u"
-PACKAGE_NAME = "backdor22" # Kayıtlı paket isminiz
-VERCEL_PROXY_URL = "https://m2-three-beta.vercel.app/api/proxy" # Sizin Vercel adresiniz
+PACKAGE_NAME = "backdor22"
+VERCEL_PROXY_URL = "https://m2-three-beta.vercel.app/api/proxy"
 
 def get_stream_link():
-    # Cloudflare ve bot korumalarını aşmak için özel tarayıcı simülasyonu
+    # Cloudflare korumasını aşmak için scraper oluşturur
     scraper = cloudscraper.create_scraper(browser={'browser': 'chrome','platform': 'windows','mobile': False})
     
     for url in SOURCES:
@@ -16,7 +16,7 @@ def get_stream_link():
             print(f"Tarama yapılıyor: {url}")
             res = scraper.get(url, timeout=20)
             
-            # 1. Yöntem: Sayfa içindeki doğrudan m3u8 linklerini tara
+            # 1. Yöntem: Doğrudan m3u8 linklerini tara
             matches = re.findall(r'[\'"](https?://[^\'"]+\.m3u8[^\'"]*)[\'"]', res.text)
             if matches:
                 for link in matches:
@@ -33,21 +33,19 @@ def get_stream_link():
                     if f_m3u8:
                         return f_m3u8[0].replace('\\/', '/')
         except Exception as e:
-            print(f"Kaynak taranırken hata oluştu ({url}): {e}")
+            print(f"Hata: {e}")
             continue
     return None
 
 def save_m3u(link):
+    # Link bulunduysa Vercel Proxy ile birleştirir, bulunamadıysa hata linki yazar
     if link:
-        # Yakalanan m3u8 linkini Vercel Proxy adresine parametre olarak ekliyoruz
         final_url = f"{VERCEL_PROXY_URL}?link={link}"
-        print(f"Yayın yakalandı ve Proxy'ye yönlendirildi: {final_url}")
+        print(f"Yayın bulundu: {final_url}")
     else:
-        # Eğer kaynaklarda o an yayın yoksa bekleme linkine yönlendiriyoruz
         final_url = "https://raw.githubusercontent.com/nookjoook56-web/M2/main/error.m3u8"
-        print("Aktif yayın bulunamadı.")
+        print("Yayın bulunamadı.")
 
-    # M3U Dosya İçeriği
     content = f"#EXTM3U\n#EXTINF:-1 tvg-id=\"beinsport-feed1\" group-title=\"{PACKAGE_NAME}\",Beinsport FEED 1\n{final_url}"
     
     with open(FILE_NAME, "w", encoding="utf-8") as f:
@@ -56,4 +54,4 @@ def save_m3u(link):
 if __name__ == "__main__":
     stream = get_stream_link()
     save_m3u(stream)
-                
+        
