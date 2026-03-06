@@ -3,90 +3,94 @@ from bs4 import BeautifulSoup
 import re
 import urllib3
 
-# Uyarıları kapat
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# --- YAPILANDIRMA (Hafızadaki Kayıtlı Bilgilerin) ---
-VERCEL_PROXY = "https://m2-üç-beta.vercel.app/api/proxy?link="
-FILE_NAME = "playlist.m3u"
-PACKAGE_NAME = "backdor22"
-START_URL = "https://larcivertsports1.blogspot.com/?m=1"
-
-def get_content(url, referer=None):
+def main():
+    # 1. GÜNCEL PROXY ADRESİN
+    PROXY = "https://m2-git-main-backdor9s-projects.vercel.app/api/proxy?link="
+    START = "https://larcivertsports1.blogspot.com/?m=1"
+    FILE_NAME = "playlist.m3u"
+    
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     }
-    if referer:
-        headers['Referer'] = referer
-    try:
-        r = requests.get(url, headers=headers, verify=False, timeout=20)
-        return r.text if r.status_code == 200 else None
-    except:
-        return None
 
-def main():
-    print("🔄 Aşama 1: Blogspot ana sayfası ve kanal kartları taranıyor...")
-    h1 = get_content(START_URL)
-    if not h1: return
+    # Kanal listesi (Kısa tutulmuştur, test amaçlı)
+    channels = [
+        ("androstreamlivebs1", 'TR:beIN Sport 1 HD'),
+        ("androstreamlivebs2", 'TR:beIN Sport 2 HD'),
+        ("androstreamlivess1", 'TR:S Sport 1 HD'),
+        ("androstreamlivetb", 'TR:Tabii HD'),
+    ]
 
-    # switchCh('b1', ...) yapısından kanal ID'lerini yakala
-    card_matches = re.findall(r"switchCh\('(.*?)'.*?>(.*?)</div>", h1, re.DOTALL)
+    def get_src(u, ref=None):
+        try:
+            if ref: headers['Referer'] = ref
+            # Proxy üzerinden çekim yapıyoruz
+            r = requests.get(PROXY + u, headers=headers, verify=False, timeout=15)
+            return r.text if r.status_code == 200 else None
+        except Exception as e:
+            print(f"Bağlantı Hatası: {e}")
+            return None
+
+    print("🚀 Süreç başlatıldı...")
     
-    # AMP linkini tespit et
-    soup = BeautifulSoup(h1, 'html.parser')
-    amp_link = soup.find('link', rel='amphtml')
-    amp_url = amp_link.get('href') if amp_link else None
-    
-    if not amp_url:
-        print("⚠️ AMP bulunamadı, işlem durduruldu.")
+    # BLOGSPOT TARAMA
+    h1 = get_src(START)
+    if not h1:
+        print("❌ Blogspot ana sayfası çekilemedi!")
         return
 
-    print(f"⚡ Aşama 2: AMP üzerinden Iframe taranıyor -> {amp_url}")
-    h2 = get_content(amp_url)
+    # AMP BULMA
+    s = BeautifulSoup(h1, 'html.parser')
+    lnk = s.find('link', rel='amphtml')
+    if not lnk:
+        print("❌ AMP linki bulunamadı!")
+        return
+    amp = lnk.get('href')
+    print(f"🔗 AMP bulundu: {amp}")
+
+    # IFRAME BULMA
+    h2 = get_src(amp)
     if not h2: return
+    m = re.search(r'src="(https?://[^"]+)"', h2)
+    if not m:
+        print("❌ Iframe linki ayıklanamadı!")
+        return
+    ifr = m.group(1)
+    print(f"📺 Iframe yakalandı: {ifr}")
 
-    # AMP içindeki asıl yayıncı iframe linkini yakala
-    ifr_match = re.search(r'src="(https?://[^"]+)"', h2)
-    if not ifr_match: return
-    ifr_url = ifr_match.group(1)
-
-    print(f"📡 Aşama 3: Sunucu havuzu (baseUrls) ayıklanıyor...")
-    h3 = get_content(ifr_url, referer=amp_url)
+    # SUNUCU HAVUZU (baseUrls)
+    h3 = get_src(ifr, ref=amp)
     if not h3: return
-
-    # Iframe içindeki gizli baseUrls listesini bul
     bm = re.search(r'baseUrls\s*=\s*\[(.*?)\]', h3, re.DOTALL)
     if not bm:
-        print("❌ Sunucu havuzu bulunamadı.")
+        print("❌ Sunucu listesi (baseUrls) bulunamadı!")
         return
 
-    raw_srvs = re.findall(r'["\'](https?://.*?)["\']', bm.group(1))
-    active_servers = list(set([s.rstrip('/') for s in raw_srvs]))
-
+    cl = bm.group(1).replace('"', '').replace("'", "").replace("\n", "").replace("\r", "")
+    srvs = [x.strip() for x in cl.split(',') if x.strip().startswith("http")]
+    active_servers = list(set(srvs))
+    
     if active_servers:
-        print(f"✅ {len(active_servers)} sunucu tespit edildi. Playlist oluşturuluyor...")
+        print(f"✅ {len(active_servers)} sunucu bulundu. Playlist yazılıyor...")
         with open(FILE_NAME, "w", encoding="utf-8") as f:
             f.write("#EXTM3U\n")
-            
-            # Her bir sunucu için kanalları döngüye sok
             for srv in active_servers:
-                # b1, b2 gibi ID'leri androstream formatına çevir
-                for cid_short, cname_raw in card_matches:
-                    clean_name = BeautifulSoup(cname_raw, "html.parser").text.strip()
-                    # ID Dönüşümü (Örn: b1 -> androstreamlivebs1)
-                    full_id = f"androstreamlive{cid_short.replace('b', 'bs')}"
+                srv = srv.rstrip('/')
+                for cid, cname in channels:
+                    # Link yapısı oluşturma
+                    raw_url = f"{srv}/checklist/{cid}.m3u8" if "checklist" not in srv else f"{srv}/{cid}.m3u8"
+                    raw_url = raw_url.replace("checklist//", "checklist/")
                     
-                    raw_m3u8 = f"{srv}/{full_id}.m3u8" if "checklist" in srv else f"{srv}/checklist/{full_id}.m3u8"
-                    raw_m3u8 = raw_m3u8.replace("checklist//", "checklist/")
+                    # PROXY EKLEME (KRİTİK ADIM)
+                    final_link = f"{PROXY}{raw_url}"
                     
-                    # Vercel Proxy Entegrasyonu
-                    final_url = f"{VERCEL_PROXY}{raw_m3u8}"
-                    
-                    f.write(f'#EXTINF:-1 tvg-id="{full_id}" group-title="{PACKAGE_NAME}",{clean_name}\n{final_url}\n')
-        print(f"✨ Başarılı: {FILE_NAME} kaydedildi.")
+                    f.write(f'#EXTINF:-1 tvg-id="sport.tr" group-title="backdor22",{cname}\n{final_link}\n')
+        print(f"✨ Bitti: {FILE_NAME} kaydedildi.")
     else:
         print("❌ Aktif sunucu bulunamadı.")
 
 if __name__ == "__main__":
     main()
-    
+                        
