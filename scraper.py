@@ -7,7 +7,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- YAPILANDIRMA (Hafızadaki Kayıtlı Bilgilerin) ---
-VERCEL_PROXY = "https://m2-three-beta.vercel.app/api/proxy?link="
+VERCEL_PROXY = "https://m2-üç-beta.vercel.app/api/proxy?link="
 FILE_NAME = "playlist.m3u"
 PACKAGE_NAME = "backdor22"
 START_URL = "https://larcivertsports1.blogspot.com/?m=1"
