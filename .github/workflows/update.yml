@@ -1,0 +1,32 @@
+name: Otomatik Playlist Guncelleme
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Her saat başı çalışır
+  workflow_dispatch: # Manuel çalıştırmak istersen
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu Çek
+        uses: actions/checkout@v3
+
+      - name: Python Kur
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Kütüphaneleri Yükle
+        run: pip install requests beautifulsoup4
+
+      - name: Scraper'ı Çalıştır
+        run: python scraper.py
+
+      - name: Değişiklikleri Kaydet
+        run: |
+          git config --global user.name "nookjoook56-web"
+          git config --global user.email "github-actions@github.com"
+          git add playlist.m3u
+          git diff --quiet && git diff --staged --quiet || (git commit -m "FEED 1 Guncellendi: $(date)" && git push)
+          
