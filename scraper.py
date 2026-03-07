@@ -8,7 +8,7 @@ def main():
     # Render üzerinde yeni kurduğun proxy
     PROXY = "https://backdor-proxy.onrender.com/proxy?link="
     # Çekilecek yeni kaynak adresi
-    SOURCE_URL = "https://telegram-grubuma-ozellistelerim.umitm0dlive.workers.dev/Atom"
+    SOURCE_URL = "https://larcivertsports1.blogspot.com/?m=1"
     FILE_NAME = "playlist.m3u"
     PACKAGE = "backdor22" # Kayıtlı paket ismin
 
